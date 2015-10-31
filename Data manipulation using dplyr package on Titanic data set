@@ -1,0 +1,96 @@
+
+
+install.packages("dplyr")
+library(dplyr)
+library(rattle)
+
+data <- read.csv("Titanic_DataSet.csv")
+View(data)
+
+# dat <- read.csv("train.csv")
+
+
+tbl_data<-tbl_df(data)
+glimpse(data) #str(data)
+glimpse(tbl_data)
+
+sex<- group_by(data,Sex)
+summarise(sex, avg_age = mean(Age, na.rm ="TRUE"))
+
+data%>%group_by(Sex)%>%summarise(avg_Age = mean(Age, na.rm ="TRUE"))%>%arrange(avg_Age)
+
+agg<-group_by(data,Sex,Age, Fare)
+freqs<-summarise(agg,n())
+
+subset<-filter(data,Age <= 20)
+
+#select columns
+select=select(data,Pclass)
+View(select)
+
+
+#select distinct
+selectPclass=distinct(select(data,Pclass))%>% 
+
+
+#sorting the data in a ascending order
+data<-arrange(data,Name)
+data<-arrange(data,desc(Name))
+View(data)
+
+#add a computed column
+Mutated_data<-mutate(data,family_size= Parch + SibSp + 1 )
+#View all the column names
+names(Mutated_data)
+#Now View your newly added column values
+View(Mutated_data)
+
+
+#seeing the frequency of Survivors with respect to Gender
+table(Mutated_data$Sex,Mutated_data$Survived)
+#row percentages
+prop.table(table(Mutated_data$Sex,Mutated_data$Survived),1)
+#columne percentages
+prop.table(table(Mutated_data$Sex,Mutated_data$Survived),2)
+#build_sql
+
+#build_sql
+tableName <-"Mutated_data"
+y <- build_sql("SELECT * FROM ",tableName)
+
+#joins
+
+#Reading Second data set of Titanic
+data_2 <- read.csv("Titanic_DataSet_2.csv")
+View(data_2)
+
+#creating two tables
+tableA <- tbl_df(data.frame(Passenger_Name = Mutated_data$Name, 
+          Passenger_Class = Mutated_data$Pclass, Passenger_Survived = Mutated_data$Survived))
+tableB <- tbl_df(data.frame(PassengerName = Mutated_data$Name, 
+                            Passenger_Class = Mutated_data$Pclass))
+
+
+#performing tableA left join tableB
+leftJoinData <- left_join(tableA,tableB,by="Passenger_Class")
+View(leftJoinData)
+
+#performing a right join b
+rightJoinData <- right_join(tableA,tableB,by="Passenger_Class")
+View(rightJoinData)
+
+#performing a inner join b
+innerJoinData <- inner_join(tableA,tableB,by="Passenger_Class")
+View(innerJoinData)
+
+#performing a full join b
+fullJoinData <- fullt_join(tableA,tableB,by="Passenger_Class")
+View(fullJoinData)
+
+#performing a semi join b
+semiJoinData <- semi_join(tableA,tableB,by="Passenger_Class")
+View(semiJoinData)
+
+#performing a anti join b
+antiJoinData <- anti_join(tableA,tableB,by="Passenger_Class")
+View(aniJoinData)
