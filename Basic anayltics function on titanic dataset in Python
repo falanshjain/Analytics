@@ -1,0 +1,118 @@
+Basic anayltics function on titanic dataset in Python (Using Numpy and Pandas package)
+
+
+__author__ = 'Falansh Jain'
+
+import csv as csv
+import numpy as np
+import pandas as pd
+
+# Open up the csv file in to a Python object
+
+# csv_file_object = open("Titanic_DataSet.csv", "wt", newline='\n')
+# csv_file_object = csv.reader(open('Titanic_DataSet.csv', newline=''), delimiter=' ', quotechar='|')
+csv_file_object = csv.reader(open('train.csv'))
+# header = csv_file_object.next()
+header = next(csv_file_object)
+
+# Reading using panda variable
+df = pd.read_csv('train.csv', header=0)
+
+dat = []
+for row in csv_file_object:
+    dat.append(row)
+    data = np.array(dat)
+
+# To print the first row of csv
+# print(data[0])
+
+# To print the fourth column of first row of csv
+# print(data[1, 3])
+
+# To print all the values of gender column
+# print(data[0::,4])
+
+number_passengers = np.size(data[0::, 1].astype(np.float))
+number_survived = np.sum(data[0::, 1].astype(np.float))
+percentage_survivors = ((number_survived / number_passengers) * 100)
+print("Percentage of survived passengers: %s " % percentage_survivors)
+
+# To count total number of women and men
+women_only_stats = data[0::, 4] == "female"
+men_only_stats = data[0::, 4] == "male"
+total_women_count = 0
+
+for r in women_only_stats:
+    if r:
+        total_women_count += 1
+
+print 'Total number of women on the ship: %s' % total_women_count
+total_men_count = number_passengers - total_women_count
+print '  Total number of men on the ship: %s' % total_men_count
+
+women_onboard = data[women_only_stats, 1].astype(np.float)
+men_onboard = data[men_only_stats, 1].astype(np.float)
+
+percentage_women_survived = ((np.sum(women_onboard) / np.size(women_onboard)) * 100)
+percentage_men_survived = ((np.sum(men_onboard) / np.size(men_onboard)) * 100)
+
+print 'Percentage of women survived is: %s' % percentage_women_survived
+print '  Percentage of men survived is: %s' % percentage_men_survived
+
+total_women_age = 0.0
+total_men_age = 0.0
+count_of_female_age_available = 0
+count_of_male_age_available = 0
+
+for row in data:
+    if row[4] == 'female' and '' != row[5]:
+        total_women_age = (float(row[5]) + total_women_age)
+        count_of_female_age_available += 1
+    if row[4] == 'male' and '' != row[5]:
+        total_men_age = (float(row[5]) + total_men_age)
+        count_of_male_age_available += 1
+
+mean_women_age = total_women_age / count_of_female_age_available
+mean_men_age = total_men_age / count_of_male_age_available
+
+data_women = [total_women_count, mean_women_age]
+data_men = [total_men_count, mean_men_age]
+
+print("Women's total count and mean age: %s" % data_women)
+print("  Men's total count and mean age: %s" % data_men)
+
+# To find unique values in a Passenger class's column
+pclass_unique = np.unique(data[0::, 2])
+print("Unique values for passengers class's are: %s" % pclass_unique)
+
+# Sorting the data in a ascending order
+arranged_names = np.sort(data[0::, 3])
+# print(arranged_names)
+
+# Adding a computed column
+# print(df.info())
+df['Family_Size'] = df['Parch'] + df['SibSp'] + 1
+# print(df['Family_Size'])
+
+# Created a column for Sex with values 0 (female) and 1(male)
+df['Gender'] = df['Sex'].map({'female': 0, 'male': 1}).astype(int)
+
+# Prepared a model for filling median age in empty cells based on Passengers class and gender
+median_ages = np.zeros((2, 3))
+for i in range(0, 2):
+    for j in range(0, 3):
+        median_ages[i, j] = df[(df['Gender'] == i) & (df['Pclass'] == j + 1)]['Age'].dropna().median()
+
+print(median_ages)
+
+# Using above model to fill empty Age cells
+df['Duplicate_Column_Age'] = df['Age']
+for i in range(0, 2):
+    for j in range(0, 3):
+        df.loc[(df.Age.isnull()) & (df.Gender == i) & (df.Pclass == j+1),'Duplicate_Column_Age'] = median_ages[i,j]
+
+
+filled_Age = df[df['Age'].isnull()][['PassengerId', 'Sex', 'Pclass', 'Age', 'Duplicate_Column_Age']].head(20)
+print(filled_Age)
+
+
