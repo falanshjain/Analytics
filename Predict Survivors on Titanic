@@ -1,0 +1,74 @@
+My aim to design this model was to predict survivors on Titanic based on different variables given dataset. This wasn’t part of my course work; I designed it due to my keen interest and learn basics of prediction modeling.
+Please find below the model (in R):
+
+#Set directory path
+setwd("Directory path")
+
+#Libraries used
+library(rpart)
+library(randomForest)
+
+#Initializing titanic training and test data
+train <- read.csv("train.csv");
+test = read.csv("test.csv");
+
+#Created Survival column and initialized it to zero
+test$Survived <- 0
+
+#Combined both the data sets to fill the empty values
+all_data <- rbind(train, test)
+
+#Using table command determined the maximum number of values for Embarked column are S, ergo initilizing with value 'S'
+table(all_data$Embarked)
+all_data$Embarked[c(62, 830)] <- "S"
+all_data$Embarked <- factor(all_data$Embarked)
+all_data$Fare[1044] <- median(all_data$Fare, na.rm = TRUE)
+
+#Creeated a new column to determine famil size for each member
+all_data$family_size <- (all_data$Parch + all_data$SibSp +1)
+
+#There are multipe cells in Age variable empty hence using 'Decision Trees' to predict the age and fill that value to empty column
+predicted_age <- rpart(Age ~ Pclass + Sex + SibSp + Parch + Fare + Embarked + family_size,
+
+data = all_data[!is.na(all_data$Age),], method = "anova")
+predicted_age
+all_data$Age[is.na(all_data$Age)] <- predict(predicted_age, all_data[is.na(all_data$Age),])
+
+#As it will matter whether the Dr. or Father is preferred while saving the passenger therefore capturing all the titles in the names columns
+all_data$titleName <- 0
+flag <- 0
+for (i in all_data$Name)
+{
+flag = flag + 1
+secondPart <- strsplit(i, ',') [[1]][2]
+title <- strsplit(secondPart, '. ') [[1]][1]
+all_data$titleName[flag] <- title
+}
+all_data$titleName <- factor(all_data$titleName)
+
+#To view unique titles of names on the ship
+nametitles <- unique(all_data$titleName)
+
+#Unbinding training and testing data set
+train <- all_data[1:891,]
+test <- all_data[892:1309,]
+all_data
+
+#To view the variables details
+str(train)
+str(test)
+set.seed(111)
+
+#Using Random Forest to predict survivors (values of this column will be 0 or 1)
+my_forest <- randomForest(as.factor(Survived) ~ Pclass + Sex + Age + SibSp + Parch + Fare + Embarked + titleName,
+data = train, importance = TRUE, ntree = 1000)
+my_prediction <- predict(my_forest, test)
+
+#Storing the values of the newly predicted column
+my_solution <- data.frame(PassengerId = test$PassengerId, Survived = my_prediction)
+
+#Created a CSV with predicted values
+write.csv(my_solution, file="my_solution.csv", row.names=FALSE)
+
+#To check the which variables are creating noise and then further modify model by removing noisy variables
+varImpPlot(my_forest)
