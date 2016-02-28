@@ -1,0 +1,44 @@
+setwd("Directory")
+library(randomForest)
+library('corrplot') #package corrplot
+
+dataCKD <- read.csv("Falansh - Final.csv")
+attach(dataCKD)
+df_dataCKD <- 0
+df_dataCKD <- data.frame(dataCKD)
+
+#TCreating testing and Training dataset
+df_sample <- sort(sample(nrow(df_dataCKD), nrow(df_dataCKD)*.7))
+train<- df_dataCKD[df_sample,]
+test<-df_dataCKD[-df_sample,]
+
+attach(train)
+#Data frame for checking the correlation between the continuous variables
+d <- data.frame(Age = dataCKD$Age,Weight = dataCKD$Weight, Height = dataCKD$Height, 
+                BMI = dataCKD$BMI, Waist = dataCKD$Waist, SBP = dataCKD$SBP, 
+                DBP = dataCKD$DBP, HDL = dataCKD$HDL, LDL = dataCKD$LDL)
+
+M <- cor(d) # get correlations
+
+corrplot(M, method = c("number"),type = "full", bg = "violet", title = "Correlation Matrix") #plot matrix
+
+logModel <- glm(formula = CKD ~ Age + Female + Race_grp_white + Race_grp_hispa	+ Race_grp_black	
+                + Educ + Unmarried + Income	+ CareSource_clinic	+ CareSource_hmo	
+                + CareSource_noplace + Insured	+ Weight + Height	+ Obese
+                + DBP + HDL + LDL + Dyslipidemia	+ PVD	+ Activity_1 + Activity_2 + 
+                  Activity_3+ PoorVision + Smoker + Hypertension	+ Fam.Hypertension + Diabetes
+                + Fam.Diabetes + Stroke	+ CVD	+ Fam.CVD	+ CHF	+ 
+                  Anemia, family=binomial(link="logit"))
+summary(logModel)
+
+
+printTest <- data.frame(PatientId = test$ID, CKD = test$CKD)
+write.csv(printTest, file="Test_CKD.csv", row.names=FALSE)
+
+test$CKD <- 0
+my_prediction <- predict(logModel, test)
+
+my_solution <- data.frame(PassengerId = test$ID, CKD = my_prediction)
+
+#Created a CSV
+write.csv(my_solution, file="my_solution.csv", row.names=FALSE)
