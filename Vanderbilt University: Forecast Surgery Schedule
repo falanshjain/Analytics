@@ -1,0 +1,157 @@
+setwd("Directory")
+library(dplyr) #package dplyr
+library(corrplot) #package corrplot
+library(Metrics)
+
+#General Analysis
+surgData <- data.frame(read.csv("Vanderbilt Univ Case Dataset.csv",header=TRUE))
+attach(surgData)
+
+d <- data.frame(T28 = T28, T14 = T14, T13 = T13, T12 = T12, T11  =T11, T10 =T10, T9 = T9,
+              T8 = T8, T7=T7,T6 = T6, T5 = T5, T4 = T4, T3 = T3, T2 = T2, T1 = T1)
+
+M <- cor(d) # get correlations
+
+corrplot(M, method = c("number"),type = "full", bg = "grey", title = "Correlation Matrix") #plot matrix
+
+#Chaining using Dplyr
+volumeDiffInWeekDay <-surgData%>%group_by(DOW)%>%summarise(Average_on_T_1 = mean(T1, trim = 1), 
+                                                           Average_on_Actual_Day = mean(Actual, trim = 1), difference = Average_on_Actual_Day - Average_on_T_1)
+View(volumeDiffInWeekDay)
+
+
+#Multilinear Regression Model
+surgData <- data.frame(read.csv("Vanderbilt Univ Case Dataset.csv",header=TRUE))
+attach(surgData)
+
+surgData$M_T21 <- surgData$T21-surgData$T28
+surgData$M_T14 <- surgData$T14-surgData$T21
+surgData$M_T7 <- surgData$T7-surgData$T14
+surgData$M_T1 <- surgData$T1-surgData$T7
+attach(surgData)
+
+preparedData <- data.frame(Date = surgData$SurgDate, DOW = surgData$DOW, On_28Day = surgData$T28, 
+                On_21Day = surgData$M_T21, On_14Day = surgData$M_T14, On_07Day = surgData$M_T7, 
+                On_01Day = surgData$M_T1, Actual = surgData$Actual)
+write.csv(preparedData, file="PreparedDataset.csv", row.names=FALSE)
+attach(preparedData)
+View(preparedData)
+
+# Correlation Matrix
+df <- data.frame(Day28_from_Surgery = surgData$T28, On_21Day = surgData$M_T21, On_14Day = surgData$M_T14, On_07Day = surgData$M_T7, 
+                On_01Day = surgData$M_T1)
+M <- cor(df) # get correlations
+corrplot(M, method = c("number"),type = "full", bg = "purple", title = "Correlation Matrix") #plot matrix
+
+
+#Linearity between Independent and Dependent Vairable
+
+#For T28
+plot(preparedData$On_28Day, preparedData$Actual, ylab = "Actual", xlab = "28th Day Before Surgery")
+model <- lm(preparedData$Actual ~ preparedData$On_28Day)
+abline(model)
+summary(model)
+
+#For T21
+plot(preparedData$On_21Day, preparedData$Actual, ylab = "Actual", xlab = "21st - 28th Day Before Surgery")
+model <- lm(preparedData$Actual ~ preparedData$On_21Day)
+abline(model)
+summary(model)
+
+
+#For T14
+plot(preparedData$On_14Day, preparedData$Actual, ylab = "Actual", xlab = "14th - 21st Day Before Surgery")
+model <- lm(preparedData$Actual ~ preparedData$On_14Day)
+abline(model)
+summary(model)
+
+
+#For T7
+plot(preparedData$On_07Day, preparedData$Actual, ylab = "Actual", xlab = "7th - 14th Day Before Surgery")
+model <- lm(preparedData$Actual ~ preparedData$On_07Day)
+abline(model)
+summary(model)
+
+
+#For T1
+plot(preparedData$On_01Day, preparedData$Actual, ylab = "Actual", xlab = "1st - 7th Day Before Surgery")
+model <- lm(preparedData$Actual ~ preparedData$On_01Day)
+abline(model)
+summary(model)
+
+#Normality check on variables
+
+qqnorm(preparedData$On_28Day)
+qqline(preparedData$On_28Day, col="Red")
+
+qqnorm(preparedData$On_21Day)
+qqline(preparedData$On_21Day, col="Red")
+
+qqnorm(preparedData$On_14Day)
+qqline(preparedData$On_14Day, col="Red")
+
+qqnorm(preparedData$On_07Day)
+qqline(preparedData$On_07Day, col="Red")
+
+qqnorm(preparedData$On_01Day)
+qqline(preparedData$On_01Day, col="Red")
+
+qqnorm(preparedData$Actual)
+qqline(preparedData$Actual, col="Red")
+
+
+#Tolerance
+#For T28
+model <- lm(preparedData$On_28Day ~ preparedData$On_21Day +
+            preparedData$On_14Day + preparedData$On_07Day +preparedData$On_01Day)
+
+summary(model)
+
+
+#For T21
+model <- lm(preparedData$On_21Day ~ preparedData$On_28Day +
+              preparedData$On_14Day + preparedData$On_07Day +preparedData$On_01Day)
+
+summary(model)
+
+#For T14
+model <- lm(preparedData$On_14Day ~ preparedData$On_21Day +
+              preparedData$On_28Day + preparedData$On_07Day +preparedData$On_01Day)
+
+summary(model)
+
+#For T07
+model <- lm(preparedData$On_07Day ~ preparedData$On_21Day +
+              preparedData$On_14Day + preparedData$On_28Day +preparedData$On_01Day)
+
+summary(model)
+
+#For T01
+model <- lm(preparedData$On_01Day ~ preparedData$On_21Day +
+              preparedData$On_14Day + preparedData$On_07Day +preparedData$On_28Day)
+
+summary(model)
+
+
+#Linear Regression Model for Prediction
+trainData <- surgData[1:225,]
+attach(trainData)
+View(train)
+
+testData <- surgData[226:241,]
+View(test)
+
+linearRModel <- lm(Actual ~ T28 +M_T21 + M_T14 + M_T7)
+
+myPrediction <- predict(linearRModel, testData)
+View(myPrediction)
+summary(linearRModel)
+
+my_solution <- data.frame(SurgDate = testData$SurgDate, DOW = testData$DOW, Actual = testData$Actual,
+                          Predictied = my_prediction)
+
+write.csv(my_solution, file="my_predicted_solution.csv", row.names=FALSE)
+
+rootMeanSquareError <- rmse(testData$Actual, myPrediction)
+rootMeanSquareError
+
